@@ -11,23 +11,26 @@ $conn = new mysqli('localhost', 'root', '', 'translateme');
 function createCommentRow($data) {
    global $conn;
 
-   $response = '
-           <div class="comment">
-               <div class="user">'.$data['name'].' <span class="time">'.$data['createdOn'].'</span></div>
-               <div class="userComment">'.$data['comment'].'</div>
-               <div class="reply">
-            
-               <a href="javascript:void(0)" data-commentID="'.$data['id'].'" onclick="reply(this)">REPLY</a>
-           
-               
-               </div> <div class="replies">';
+
+    $response = '
+    <div class="comment">
+        <div class="user">'.$data['name'].' <span class="time">'.$data['createdOn'].'</span></div>
+        <div class="userComment">'.$data['comment'].'</div>
+        <div class="reply">
+     
+        <a href="javascript:void(0)" visibility: hidden; data-commentID="'.$data['id'].'"  onclick="reply(this)">REPLY</a>
+    
+        
+     </div> <div class="replies">';
+   
+ 
 
    $sql = $conn->query("SELECT replies.id, name, comment, DATE_FORMAT(replies.createdOn, '%Y-%m-%d') AS createdOn FROM replies INNER JOIN users ON replies.userID = users.id WHERE replies.commentID = '".$data['id']."' ORDER BY replies.id DESC LIMIT 1");
    while($dataR = $sql->fetch_assoc())
        $response .= createCommentRow($dataR);
 
    $response .= '
-                       </div>
+           </div>
            </div>
        ';
 
@@ -154,9 +157,11 @@ $numComments = $sqlNumComments->num_rows;
          #registerModal, input, #logInModal input{
          margin-top:10px;
          }
+       
       </style>
    </head>
    <body>
+
       <div class="modal" id="registerModal">
          <div class="modal-dialog">
          <div class="modal-content">
@@ -193,18 +198,21 @@ $numComments = $sqlNumComments->num_rows;
             </div>
          </div>
       </div>
+       <?php
+     
+       ?>
       <div class="container" style = "margin-top:20px;">
       <div class="row">
             <div class="col-md-12" align="right">
         <?php
-if (!$loggedIn) echo '
+        if (!$loggedIn) echo '
                         <button class="btn btn-primary" data-toggle="modal" data-target="#registerModal">Register</button>
                         <button class="btn btn-success" data-toggle="modal" data-target="#logInModal">Log In</button>
                 ';
-else echo '
+         else echo '
                     <a href="logout.php" class="btn btn-warning">Log Out</a>
                 ';
-?>
+        ?>
             </div>
         </div>
          <div class="row" style= "margin-top: 20px; margin-bottom: 20px;">
@@ -225,7 +233,13 @@ else echo '
       <div class="row replyRow" style= "margin-top: 20px; margin-bottom: 20px; display:none;">
             <div class="col-md-12">
                <textarea class="form-control" id ="replyComment" placeholder="Add public comment" cols="30" rows="2"></textarea><br>
-               <button style="float:right;" class="btn-primary btn" onClick="isReply = true" id="addComment">Add Reply</button>
+               <?php
+               if ($loggedIn == true){
+                echo'<button style="float:right;" class="btn-primary btn" onClick="isReply = true" id="addComment">Add Reply</button>';
+               } else { 
+                echo '<button style="float:right; visibility:hidden;"  class="btn-primary btn" onClick="isReply = true" id="addComment">Add Reply</button>';
+                } 
+              ?>
                <button style="float:right;" class="btn-default btn" onClick="$('.replyRow').hide();">Close</button>
             </div>
          </div>

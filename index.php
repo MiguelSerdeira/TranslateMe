@@ -217,8 +217,17 @@ $numComments = $sqlNumComments->num_rows;
         </div>
          <div class="row" style= "margin-top: 20px; margin-bottom: 20px;">
             <div class="col-md-12">
-               <textarea class="form-control" id ="mainComment" placeholder="Add public comment" cols="30" rows="2"></textarea><br>
-               <button style="float:right;" class="btn-primary btn" onClick="isReply = false" id="addComment">Add Comment</button>
+            <?php
+               if ($loggedIn == true){
+               echo'<textarea class="form-control" id ="mainComment" placeholder="Add public comment" cols="30" rows="2"></textarea><br>';
+           
+                echo'<button style="float:right;" class="btn-primary btn" onClick="isReply = false" id="addComment">Add Comment</button>';
+               }else{
+                echo'<textarea disabled class="form-control" id ="mainComment" placeholder="You need to be logged in to make a post!" cols="30" rows="2"></textarea><br>';
+               }  
+               
+               ?>
+
             </div>
          </div>
          <div class="row" style= "margin-top: 20px;">
@@ -232,13 +241,12 @@ $numComments = $sqlNumComments->num_rows;
       </div>
       <div class="row replyRow" style= "margin-top: 20px; margin-bottom: 20px; display:none;">
             <div class="col-md-12">
-               <textarea class="form-control" id ="replyComment" placeholder="Add public comment" cols="30" rows="2"></textarea><br>
-               <?php
+            <?php
                if ($loggedIn == true){
+                echo '<textarea class="form-control" id ="replyComment" placeholder="Add public comment" cols="30" rows="2"></textarea><br>';
                 echo'<button style="float:right;" class="btn-primary btn" onClick="isReply = true" id="addComment">Add Reply</button>';
-               } else { 
-                echo '<button style="float:right; visibility:hidden;"  class="btn-primary btn" onClick="isReply = true" id="addComment">Add Reply</button>';
-                } 
+                } else echo '<textarea disabled class="form-control" id ="replyComment" placeholder="You need to be logged in to reply to a comment!" cols="30" rows="2"></textarea><br>';
+
               ?>
                <button style="float:right;" class="btn-default btn" onClick="$('.replyRow').hide();">Close</button>
             </div>

@@ -1,129 +1,6 @@
-<?php
-session_start();
-$loggedIn = false;
-if (isset($_SESSION['loggedIn']) && isset($_SESSION['name']))
-{
-    $loggedIn = true;
-}
+<?PHP include "DB.PHP"; ?>
+<?PHP include "MYSQL.PHP"; ?>
 
-$conn = new mysqli('localhost', 'root', '', 'translateme');
-
-function createCommentRow($data) {
-   global $conn;
-
-
-    $response = '
-    <div class="comment">
-        <div class="user">'.$data['name'].' <span class="time">'.$data['createdOn'].'</span></div>
-        <div class="userComment">'.$data['comment'].'</div>
-        <div class="reply">
-     
-        <button class="btn btn-secondary" href="javascript:void(0)"  data-commentID="'.$data['id'].'"  onclick="reply(this)">REPLY</button>
-    
-        
-     </div> <div class="replies">';
-   
- 
-
-     $sql = $conn->query("SELECT replies.id, name, comment, DATE_FORMAT(replies.createdOn, '%Y-%m-%d') AS createdOn FROM replies INNER JOIN users ON replies.userID = users.id WHERE replies.commentID = '".$data['id']."' ORDER BY replies.id DESC LIMIT 1");
-     while($dataR = $sql->fetch_assoc())
-         $response .= createCommentRow($dataR);
- 
-     $response .= '
-                         </div>
-             </div>
-         ';
-
-   return $response;
-}
-if (isset($_POST['getAllComments'])) {
-    $start = $conn->real_escape_string($_POST['start']);
-
-    $response = "";
-    $sql = $conn->query("SELECT comments.id, name, comment, DATE_FORMAT(comments.createdOn, '%Y-%m-%d') AS createdOn FROM comments INNER JOIN users ON comments.userID = users.id ORDER BY comments.id DESC LIMIT $start, 20");
-    while($data = $sql->fetch_assoc())
-        $response .= createCommentRow($data);
-
-    exit($response);
-}
-
-if (isset($_POST['addComment'])) {
-    $comment = $conn->real_escape_string($_POST['comment']);
-    $isReply = $conn->real_escape_string($_POST['isReply']);
-    $commentID = $conn->real_escape_string($_POST['commentID']);
-
-    if ($isReply != 'false') {
-        $conn->query("INSERT INTO replies (comment, commentID, userID, createdOn) VALUES ('$comment', '$commentID', '".$_SESSION['userID']."', NOW())");
-        $sql = $conn->query("SELECT replies.id, name, comment, DATE_FORMAT(replies.createdOn, '%Y-%m-%d') AS createdOn FROM replies INNER JOIN users ON replies.userID = users.id ORDER BY replies.id DESC LIMIT 1");
-    } else {
-        $conn->query("INSERT INTO comments (userID, comment, createdOn) VALUES ('".$_SESSION['userID']."','$comment',NOW())");
-        $sql = $conn->query("SELECT comments.id, name, comment, DATE_FORMAT(comments.createdOn, '%Y-%m-%d') AS createdOn FROM comments INNER JOIN users ON comments.userID = users.id ORDER BY comments.id DESC LIMIT 1");
-    }
-
-    $data = $sql->fetch_assoc();
-    exit(createCommentRow($data));
-}
-
-
-if (isset($_POST['register']))
-{
-    $name = $conn->real_escape_string($_POST['name']);
-    $email = $conn->real_escape_string($_POST['email']);
-    $password = $conn->real_escape_string($_POST['password']);
-
-    if (filter_var($email, FILTER_VALIDATE_EMAIL))
-    {
-        $sql = $conn->query("SELECT id FROM users WHERE email='$email'");
-        if ($sql->num_rows > 0) exit('failedUserExists');
-        else
-        {
-            $ePassword = password_hash($password, PASSWORD_BCRYPT);
-            $conn->query("INSERT INTO users (name,email,password,createdOn) VALUES ('$name', '$email', '$ePassword', NOW())");
-
-            $sql = $conn->query('SELECT id FROM users ORDER BY id DESC LIMIT 1');
-            $data = $sql->fetch_assoc();
-
-            $_SESSION['loggedIn'] = 1;
-            $_SESSION['name'] = $name;
-            $_SESSION['email'] = $email;
-            $_SESSION['userID'] = $data['id'];
-
-            exit('success');
-
-        }
-    }
-    else exit('failedEmail');
-}
-if (isset($_POST['logIn'])) {
-    $email = $conn->real_escape_string($_POST['email']);
-    $password = $conn->real_escape_string($_POST['password']);
-
-    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $sql = $conn->query("SELECT id, password, name FROM users WHERE email='$email'");
-        if ($sql->num_rows == 0)
-            exit('failed');
-        else {
-            $data = $sql->fetch_assoc();
-            $passwordHash = $data['password'];
-
-            if (password_verify($password, $passwordHash)) {
-                $_SESSION['loggedIn'] = 1;
-                $_SESSION['name'] = $data['name'];
-                $_SESSION['email'] = $email;
-                $_SESSION['userID'] = $data['id'];
-
-                exit('success');
-            } else
-                exit('failed');
-        }
-    } else
-        exit('failed');
-}
-
-$sqlNumComments = $conn->query("SELECT id FROM comments");
-$numComments = $sqlNumComments->num_rows;
-
-?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -131,38 +8,14 @@ $numComments = $sqlNumComments->num_rows;
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>TranslateMe</title>
+      <link rel="stylesheet" href="style.css">
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
-      <style type="text/css">
-         .comment{
-            margin-bottom: 20px;
-         }
-         .user{
-         font-weight: bold;
-         color:black;
-         }
-         .time, .reply{
-         color: gray;
-         }
-         .userComment {
-         color: #000;
-         }
-         .replies .comment{
-         margin-top:20px;
-         margin-bottom:20px;
-         }
-         .replies {
-         margin-left:20px;
-         }
-         #registerModal, input, #logInModal input{
-         margin-top:10px;
-         }
-       
-      </style>
+     
    </head>
    <body style=" background:linear-gradient(to right, #7592A2, #516395);";>
 
       <div class="modal" id="registerModal">
-         <div class="modal-dialog p2">
+         <div class="modal-dialog">
          <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Registration Form</h5>
@@ -232,7 +85,6 @@ $numComments = $sqlNumComments->num_rows;
                     </li>
                  </ul>
             </div>
-
                     ';
             ?>
 
@@ -247,7 +99,7 @@ $numComments = $sqlNumComments->num_rows;
     <div class="d-flex mt-4 justify-content-center">
     <?php
                if ($loggedIn == true){
-               echo'<textarea class="form-control" id ="mainComment" placeholder="Add public comment" cols="30" rows="2"></textarea><br>';
+               echo'<textarea class="form-control" id ="mainComment" placeholder="Add a public comment" cols="30" rows="2"></textarea><br>';
            
                 echo'<button style="float:right;" class="btn-primary btn" onClick="isReply = false" id="addComment">Add Comment</button>';
                }else{
@@ -258,12 +110,18 @@ $numComments = $sqlNumComments->num_rows;
   </div>
 </div>
 
+            
+
+
    <div class="px-4">
          <div class="row" style= "margin-top: 20px;">
             <div class="col-md-12">
-               <h2><b id="numComments"> <?php echo $numComments?> Comments</b> </h2>
-               <div class="userComments"> 
+           
+               <h2><b id="numComments"> <?php echo $numComments ?> Comments</b> </h2>
+               <div class="userComments">
+                
                </div>
+  
             </div>
          </div>
       </div>
@@ -271,7 +129,7 @@ $numComments = $sqlNumComments->num_rows;
             <div class="col-md-12 d-flex">
             <?php
                if ($loggedIn == true){
-                echo '<textarea class="form-control" id ="replyComment" placeholder="Add public comment" cols="30" rows="2"></textarea><br>';
+                echo '<textarea class="form-control" id ="replyComment" placeholder="Add a public comment" cols="30" rows="2"></textarea><br>';
                 echo'<button style="float:right;" class="btn-primary btn" onClick="isReply = true" id="addComment">Add Reply</button>';
                 } else echo '<textarea disabled class="form-control" id ="replyComment" placeholder="You need to be logged in to reply to a comment!" cols="30" rows="2"></textarea><br>';
 
@@ -279,134 +137,131 @@ $numComments = $sqlNumComments->num_rows;
                <button style="float:right;" class="btn btn-secondary" onClick="$('.replyRow').hide();">Close</button>
             </div>
          </div>
+
 </div>
       <script src="http://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
       <script type="text/javascript">
         
+    
+     var isReply = false, commentID = 0, max = <?php echo $numComments ?>;
 
-        var isReply = false, 
-        commentID = 0, 
-        max = <?php echo $numComments ?>;
+        $(document).ready(function (){
+         $("#addComment, #addReply").on('click', function () {
 
-$(document).ready(function () {
-    $("#addComment, #addReply").on('click', function () {
-        var comment;
+               var comment;
+               if(!isReply)
+                comment = $("#mainComment").val();
+               else comment = $("#replyComment").val();
 
-        if (!isReply)
-            comment = $("#mainComment").val();
-        else
-            comment = $("#replyComment").val();
+               if (comment.length > 5) {
+                    $.ajax({
+                        url: 'index.php',
+                        method: 'POST',
+                        dataType: 'text',
+                        data: {
+                            addComment: 1,
+                            comment: comment,
+                            isReply, isReply,
+                            commentID: commentID
+                        }, success: function (response) {
+                           max ++;
+                           $("#numComments").text(max + " Comments");
+                        if(!isReply){
+                           $(".userComments").prepend(response);
+                           $("#mainComment").val("");
+                        }
+                         else{
+                            commentID = 0;
+                           $("replyComment").val("");
+                           $(".replyRow").hide();
+                           $('.replyRow').parent().next().append(response);
+                         }
+                        }
+                    });
+               } else
+                   alert('Please Check Your Inputs');
+           });
 
-        if (comment.length > 5) {
-            $.ajax({
-                url: 'index.php',
-                method: 'POST',
-                dataType: 'text',
-                data: {
-                    addComment: 1,
-                    comment: comment,
-                    isReply: isReply,
-                    commentID: commentID
-                }, success: function (response) {
-                    max++;
-                    $("#numComments").text(max + " Comments");
+             $("#registerBtn").on('click', function(){
+                 var name = $("#userName").val();
+                 var email = $("#userEmail").val();
+                 var password = $("#userPassword").val();
+                 if (name != "" && email != "" && password != "") {
+                    $.ajax({
+                        url: 'index.php',
+                        method: 'POST',
+                        dataType: 'text',
+                        data: {
+                            register: 1,
+                            name: name,
+                            email: email,
+                            password: password
+                        }, success: function (response){
+                           if (response == "failedEmail"){
+                              alert('Please insert valid email adress!');
+                           }else if (response == "failedUserExists"){
+                              alert('User with this email already exists');
 
-                    if (!isReply) {
-                        $(".userComments").prepend(response);
-                        $("#mainComment").val("");
-                    } else {
-                        commentID = 0;
-                        $("#replyComment").val("");
-                        $(".replyRow").hide();
-                        $('.replyRow').parent().next().append(response);
-                    }
-                }
-            });
-        } else
-            alert('Please Check Your Inputs');
-    });
+                           }else window.location = window.location;
+                        }
+                    })
+                 } else
+                 alert('Please check your inputs');
+             });
+          
 
-    $("#registerBtn").on('click', function () {
-        var name = $("#userName").val();
-        var email = $("#userEmail").val();
-        var password = $("#userPassword").val();
+          
+             $("#loginBtn").on('click', function () {
+               var email = $("#userLEmail").val();
+               var password = $("#userLPassword").val();
 
-        if (name != "" && email != "" && password != "") {
-            $.ajax({
-                url: 'index.php',
-                method: 'POST',
-                dataType: 'text',
-                data: {
-                    register: 1,
-                    name: name,
-                    email: email,
-                    password: password
-                }, success: function (response) {
-                    if (response === 'failedEmail')
-                        alert('Please insert valid email address!');
-                    else if (response === 'failedUserExists')
-                        alert('User with this email already exists!');
-                    else
-                        window.location = window.location;
-                }
-            });
-        } else
-            alert('Please Check Your Inputs');
-    });
+               if (email != "" && password != "") {
+                    $.ajax({
+                        url: 'index.php',
+                        method: 'POST',
+                        dataType: 'text',
+                        data: {
+                            logIn: 1,
+                            email: email,
+                            password: password
+                        }, success: function (response) {
+                            if (response === 'failed')
+                                alert('Please check your login details!');
+                            else
+                                window.location = window.location;
+                        }
+                    });
+               } else
+                   alert('Please Check Your Inputs');
+           });
+           getAllComments(0, <?php echo $numComments ?>);
+        });
 
-    $("#loginBtn").on('click', function () {
-        var email = $("#userLEmail").val();
-        var password = $("#userLPassword").val();
-
-        if (email != "" && password != "") {
-            $.ajax({
-                url: 'index.php',
-                method: 'POST',
-                dataType: 'text',
-                data: {
-                    logIn: 1,
-                    email: email,
-                    password: password
-                }, success: function (response) {
-                    if (response === 'failed')
-                        alert('Please check your login details!');
-                    else
-                        window.location = window.location;
-                }
-            });
-        } else
-            alert('Please Check Your Inputs');
-    });
-
-    getAllComments(0, max);
-});
-
-function reply(caller) {
-    commentID = $(caller).attr('data-commentID');
-    $(".replyRow").insertAfter($(caller));
-    $('.replyRow').show();
-}
-
-function getAllComments(start, max) {
-    if (start > max) {
-        return;
-    }
-
-    $.ajax({
-        url: 'index.php',
-        method: 'POST',
-        dataType: 'text',
-        data: {
-            getAllComments: 1,
-            start: start
-        }, success: function (response) {
-            $(".userComments").append(response);
-            getAllComments((start+20), max);
+        function reply(caller){
+           commentID = $(caller).attr('data-commentID');
+           $(".replyRow").insertAfter($(caller));
+           $('.replyRow').show();
         }
-    });
-}
+
+        function getAllComments(start,max){
+         if (start > max){
+            return;
+         }
+         $.ajax({
+                        url: 'index.php',
+                        method: 'POST',
+                        dataType: 'text',
+                        data: {
+                            getAllComments: 1,
+                            start:start
+                        }, success: function (response) {
+                           $(".userComments").append(response);
+                           getAllComments((start+20),max);
+                        }
+                    });
+        }  
       </script>
    </body>
 </html>
